@@ -1,0 +1,53 @@
+description,category
+swiggy dinner,Food
+swiggy lunch,Food
+swiggy breakfast,Food
+zomato dinner,Food
+zomato lunch,Food
+restaurant dinner,Food
+restaurant lunch,Food
+pizza order,Food
+burger meal,Food
+coffee at cafe,Food
+groceries,Food
+milk and bread,Food
+fruit purchase,Food
+vegetables,Food
+uber ride,Transport
+ola cab,Transport
+cab to college,Transport
+auto ride,Transport
+bus ticket,Transport
+petrol refill,Transport
+fuel station,Transport
+bike service,Transport
+amazon shoes,Shopping
+amazon clothes,Shopping
+clothes purchase,Shopping
+new shirt,Shopping
+new shoes,Shopping
+shopping mall,Shopping
+online shopping,Shopping
+electricity bill,Bills
+water bill,Bills
+internet bill,Bills
+mobile recharge,Bills
+phone bill,Bills
+rent payment,Bills
+insurance payment,Bills
+netflix subscription,Entertainment
+movie ticket,Entertainment
+cinema ticket,Entertainment
+spotify subscription,Entertainment
+youtube premium,Entertainment
+concert ticket,Entertainment
+gym membership,Health
+doctor consultation,Health
+medicine purchase,Health
+pharmacy,Health
+medical checkup,Health
+hospital bill,Health
+salary credit,Income
+monthly salary,Income
+freelance payment,Income
+bonus received,Income
