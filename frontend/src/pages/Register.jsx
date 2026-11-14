@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 
 function Register() {
@@ -9,7 +10,10 @@ function Register() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const API_URL = "http://127.0.0.1:8000";
+  // Uses the Render backend in production
+  // and the local backend during development.
+  const API_URL =
+    import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
 
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -45,7 +49,9 @@ function Register() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.detail || "Registration failed");
+        throw new Error(
+          data.detail || "Registration failed"
+        );
       }
 
       setSuccess(
@@ -58,7 +64,9 @@ function Register() {
 
     } catch (err) {
       console.error(err);
-      setError(err.message);
+      setError(
+        err.message || "Unable to connect to the server."
+      );
     } finally {
       setLoading(false);
     }
@@ -79,7 +87,9 @@ function Register() {
 
         <div className="auth-heading">
           <h2>Create Account</h2>
-          <p>Start managing your finances intelligently</p>
+          <p>
+            Start managing your finances intelligently
+          </p>
         </div>
 
         {error && (
@@ -103,7 +113,9 @@ function Register() {
               type="text"
               placeholder="Enter your name"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) =>
+                setName(e.target.value)
+              }
             />
           </div>
 
@@ -114,7 +126,9 @@ function Register() {
               type="email"
               placeholder="Enter your email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) =>
+                setEmail(e.target.value)
+              }
             />
           </div>
 
@@ -125,7 +139,9 @@ function Register() {
               type="password"
               placeholder="Create a password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) =>
+                setPassword(e.target.value)
+              }
             />
           </div>
 
@@ -134,7 +150,9 @@ function Register() {
             className="auth-submit-btn"
             disabled={loading}
           >
-            {loading ? "Creating Account..." : "Create Account"}
+            {loading
+              ? "Creating Account..."
+              : "Create Account"}
           </button>
 
         </form>
