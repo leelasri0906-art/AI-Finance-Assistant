@@ -1,35 +1,45 @@
 # Python
 __pycache__/
 *.py[cod]
+*$py.class
 *.pyo
 
 # Virtual environments
 .venv/
 venv/
 env/
+ENV/
 
 # Environment variables
 .env
+.env.*
+!.env.example
+*.env.local
 
-# SQLite database
+# Databases
 *.db
 *.sqlite
 *.sqlite3
-
-# ML generated model
-backend/ml/expense_model.pkl
+backend/finance.db
+backend/test_finance.db
 
 # Uploaded files
 backend/uploads/
+uploads/
 
-# Node
+# Node & Frontend
+node_modules/
 frontend/node_modules/
-
-# Vite build
 frontend/dist/
+dist/
+.npm
+npm-debug.log*
 
-# VS Code
+# IDE & Editor
 .vscode/
+.idea/
+*.swp
+*.swo
 
 # OS
 .DS_Store

@@ -1,74 +1,56 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import api from "../services/api";
+import { formatMoney } from "../utils/formatters";
 
 function Analytics() {
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const API_URL = "http://127.0.0.1:8000";
-
-  const fetchAnalytics = async () => {
+  const loadAnalytics = useCallback(async () => {
     try {
-      setError("");
-
-      const token = localStorage.getItem("access_token");
-
-      if (!token) {
-        setError("You are not logged in.");
-        return;
-      }
-
-      const response = await fetch(
-        `${API_URL}/api/analytics`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          localStorage.removeItem("access_token");
-          throw new Error(
-            "Your session has expired. Please login again."
-          );
-        }
-
-        throw new Error(
-          data.detail || "Failed to load analytics"
-        );
-      }
-
+      const data = await api.getAnalytics();
       setAnalytics(data);
-
+      setError("");
     } catch (err) {
-      console.error(err);
-      setError(err.message);
+      setError(err.message || "Failed to load analytics");
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchAnalytics();
   }, []);
 
-  const formatMoney = (amount) => {
-    return `₹${Number(amount).toLocaleString("en-IN", {
-      maximumFractionDigits: 2,
-    })}`;
-  };
+  useEffect(() => {
+    let isMounted = true;
+
+    const init = async () => {
+      try {
+        const data = await api.getAnalytics();
+        if (isMounted) {
+          setAnalytics(data);
+          setError("");
+        }
+      } catch (err) {
+        if (isMounted) {
+          setError(err.message || "Failed to load analytics");
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    init();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   if (loading) {
     return (
       <div className="analytics-page">
-        <div className="loading-state">
-          Loading financial analytics...
-        </div>
+        <div className="loading-state">Loading financial analytics...</div>
       </div>
     );
   }
@@ -77,8 +59,19 @@ function Analytics() {
     return (
       <div className="analytics-page">
         <div className="error-message">
-          ✕ {error}
+          <span>✕</span> {error}
         </div>
+        <button
+          type="button"
+          className="primary-button"
+          style={{ marginTop: "16px" }}
+          onClick={() => {
+            setLoading(true);
+            loadAnalytics();
+          }}
+        >
+          Retry
+        </button>
       </div>
     );
   }
@@ -87,314 +80,141 @@ function Analytics() {
     return null;
   }
 
-  const categoryEntries = Object.entries(
-    analytics.category_totals || {}
+  const categoryEntries = Object.entries(analytics.category_totals || {});
+  const monthlyExpenses = analytics.monthly_expenses || [];
+  const maxMonthly = Math.max(
+    ...monthlyExpenses.map((m) => m.amount),
+    1
   );
-
-  const monthlyExpenses =
-    analytics.monthly_expenses || [];
 
   return (
     <div className="analytics-page">
-
-      {/* PAGE HEADER */}
       <div className="page-header">
         <div>
-          <h1>Analytics</h1>
-
-          <p>
-            Understand your income and spending patterns
-          </p>
+          <h1>Financial Analytics</h1>
+          <p>Detailed breakdown of your spending behavior and monthly trends</p>
         </div>
       </div>
 
-
-      {/* SUMMARY CARDS */}
+      {/* STAT CARDS */}
       <div className="stats-grid">
-
         <div className="stat-card">
-
-          <div className="stat-card-icon income-icon">
-            ↑
-          </div>
-
+          <div className="stat-card-icon">₹</div>
           <div>
-            <p className="stat-label">
-              Total Income
-            </p>
-
-            <h2>
-              {formatMoney(
-                analytics.total_income
-              )}
-            </h2>
+            <p className="stat-label">Total Recorded Income</p>
+            <h2>{formatMoney(analytics.total_income)}</h2>
           </div>
-
         </div>
 
-
         <div className="stat-card">
-
-          <div className="stat-card-icon expense-icon">
-            ↓
-          </div>
-
+          <div className="stat-card-icon expense-icon">↓</div>
           <div>
-            <p className="stat-label">
-              Total Expenses
-            </p>
-
-            <h2>
-              {formatMoney(
-                analytics.total_expenses
-              )}
-            </h2>
+            <p className="stat-label">Total Recorded Expenses</p>
+            <h2>{formatMoney(analytics.total_expenses)}</h2>
           </div>
-
         </div>
 
-
         <div className="stat-card">
-
-          <div className="stat-card-icon">
-            ₹
-          </div>
-
+          <div className="stat-card-icon">~</div>
           <div>
-            <p className="stat-label">
-              Average Expense
-            </p>
-
-            <h2>
-              {formatMoney(
-                analytics.average_expense
-              )}
-            </h2>
+            <p className="stat-label">Average Expense</p>
+            <h2>{formatMoney(analytics.average_expense)}</h2>
           </div>
-
         </div>
 
-
         <div className="stat-card">
-
-          <div className="stat-card-icon">
-            #
-          </div>
-
+          <div className="stat-card-icon">#</div>
           <div>
-            <p className="stat-label">
-              Transactions
-            </p>
-
-            <h2>
-              {analytics.transaction_count}
-            </h2>
+            <p className="stat-label">Total Transactions</p>
+            <h2>{analytics.transaction_count}</h2>
           </div>
-
         </div>
-
       </div>
 
-
-      {/* CATEGORY ANALYSIS */}
-      <div className="analytics-card">
-
-        <div className="card-header">
-
-          <div>
-            <h2>
-              Expense by Category
-            </h2>
-
-            <p>
-              See where your money is going
-            </p>
+      <div className="dashboard-grid">
+        {/* MONTHLY EXPENSES BAR CHART */}
+        <div className="dashboard-card">
+          <div className="card-header">
+            <div>
+              <h2>Monthly Spending Trends</h2>
+              <p>Historical expense totals month-over-month</p>
+            </div>
           </div>
 
-        </div>
-
-
-        {categoryEntries.length === 0 ? (
-
-          <div className="empty-state">
-
-            <h3>
-              No expense data
-            </h3>
-
-            <p>
-              Add some expenses to generate
-              category analytics.
-            </p>
-
-          </div>
-
-        ) : (
-
-          <div className="analytics-category-list">
-
-            {categoryEntries.map(
-              ([category, amount]) => {
-
-                const percentage =
-                  analytics.total_expenses > 0
-                    ? (
-                        (amount /
-                          analytics.total_expenses) *
-                        100
-                      )
-                    : 0;
-
+          {monthlyExpenses.length === 0 ? (
+            <div className="empty-state">
+              <h3>No monthly data</h3>
+              <p>Recorded expenses will show monthly distribution here.</p>
+            </div>
+          ) : (
+            <div style={{ marginTop: "24px" }}>
+              {monthlyExpenses.map((m) => {
+                const barWidth = Math.round((m.amount / maxMonthly) * 100);
                 return (
-                  <div
-                    className="analytics-category"
-                    key={category}
-                  >
-
-                    <div className="analytics-category-header">
-
-                      <span>
-                        {category}
+                  <div key={m.month} style={{ marginBottom: "16px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
+                      <strong>{m.month}</strong>
+                      <span style={{ color: "#a5b4fc", fontWeight: "600" }}>
+                        {formatMoney(m.amount)}
                       </span>
-
-                      <strong>
-                        {formatMoney(amount)}
-                      </strong>
-
                     </div>
-
-
-                    <div className="analytics-bar">
-
+                    <div className="category-bar">
                       <div
-                        className="analytics-bar-fill"
+                        className="category-bar-fill"
                         style={{
-                          width: `${percentage}%`,
+                          width: `${barWidth}%`,
+                          background: "linear-gradient(90deg, #6366f1, #8b5cf6)",
                         }}
                       />
-
                     </div>
-
-
-                    <div className="analytics-percentage">
-
-                      {percentage.toFixed(1)}%
-                      {" "}of total expenses
-
-                    </div>
-
                   </div>
                 );
-              }
-            )}
-
-          </div>
-
-        )}
-
-      </div>
-
-
-      {/* MONTHLY ANALYSIS */}
-      <div className="analytics-card">
-
-        <div className="card-header">
-
-          <div>
-            <h2>
-              Monthly Spending
-            </h2>
-
-            <p>
-              Your expense trend by month
-            </p>
-          </div>
-
+              })}
+            </div>
+          )}
         </div>
 
-
-        {monthlyExpenses.length === 0 ? (
-
-          <div className="empty-state">
-
-            <h3>
-              No monthly data
-            </h3>
-
-            <p>
-              Add transactions to see
-              monthly spending.
-            </p>
-
+        {/* CATEGORY DISTRIBUTION */}
+        <div className="dashboard-card">
+          <div className="card-header">
+            <div>
+              <h2>Expense by Category</h2>
+              <p>All-time categorized spending</p>
+            </div>
           </div>
 
-        ) : (
-
-          <div className="monthly-list">
-
-            {monthlyExpenses.map(
-              (item) => {
-
-                const maxExpense =
-                  Math.max(
-                    ...monthlyExpenses.map(
-                      (month) =>
-                        Number(month.amount)
-                    )
-                  );
-
-                const width =
-                  maxExpense > 0
-                    ? (
-                        (Number(item.amount) /
-                          maxExpense) *
-                        100
-                      )
-                    : 0;
+          {categoryEntries.length === 0 ? (
+            <div className="empty-state">
+              <h3>No category data</h3>
+              <p>Categorized spending will appear here.</p>
+            </div>
+          ) : (
+            <div className="category-list">
+              {categoryEntries.map(([cat, amt]) => {
+                const pct = analytics.total_expenses
+                  ? Math.round((amt / analytics.total_expenses) * 100)
+                  : 0;
 
                 return (
-                  <div
-                    className="monthly-row"
-                    key={item.month}
-                  >
-
-                    <div className="monthly-label">
-
-                      <span>
-                        {item.month}
-                      </span>
-
-                      <strong>
-                        {formatMoney(
-                          item.amount
-                        )}
-                      </strong>
-
+                  <div className="category-row" key={cat}>
+                    <div className="category-info">
+                      <span className="category-name">{cat}</span>
+                      <span className="category-amount">{formatMoney(amt)} ({pct}%)</span>
                     </div>
 
-
-                    <div className="monthly-bar">
-
+                    <div className="category-bar">
                       <div
-                        className="monthly-bar-fill"
-                        style={{
-                          width: `${width}%`,
-                        }}
+                        className="category-bar-fill"
+                        style={{ width: `${pct}%` }}
                       />
-
                     </div>
-
                   </div>
                 );
-              }
-            )}
-
-          </div>
-
-        )}
-
+              })}
+            </div>
+          )}
+        </div>
       </div>
-
     </div>
   );
 }

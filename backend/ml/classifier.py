@@ -1,12 +1,4 @@
-import joblib
-from pathlib import Path
+# Backward compatibility shim
+from app.services.ml_classifier import predict_category
 
-
-MODEL_PATH = Path(__file__).parent / "expense_model.pkl"
-
-model = joblib.load(MODEL_PATH)
-
-
-def predict_category(description: str) -> str:
-    prediction = model.predict([description])[0]
-    return prediction
+__all__ = ["predict_category"]

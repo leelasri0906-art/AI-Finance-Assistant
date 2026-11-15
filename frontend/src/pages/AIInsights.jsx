@@ -1,73 +1,57 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import api from "../services/api";
+import { formatMoney } from "../utils/formatters";
 
 function AIInsights() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const API_URL = import.meta.env.VITE_API_URL;
-
-  useEffect(() => {
-    loadInsights();
-  }, []);
-
-  const loadInsights = async () => {
+  const loadInsights = useCallback(async () => {
     try {
-      setLoading(true);
-      setError("");
-
-      const token =
-        localStorage.getItem("access_token");
-
-      if (!token) {
-        setError("You are not logged in.");
-        return;
-      }
-
-      const response = await fetch(
-        `${API_URL}/api/insights`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          result.detail ||
-            "Failed to load AI insights"
-        );
-      }
-
+      const result = await api.getInsights();
       setData(result);
-
+      setError("");
     } catch (err) {
-      console.error(err);
-      setError(err.message);
-
+      setError(err.message || "Failed to load AI insights");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const formatMoney = (amount) => {
-    return `₹${Number(amount).toLocaleString(
-      "en-IN",
-      {
-        maximumFractionDigits: 2,
+  useEffect(() => {
+    let isMounted = true;
+
+    const init = async () => {
+      try {
+        const result = await api.getInsights();
+        if (isMounted) {
+          setData(result);
+          setError("");
+        }
+      } catch (err) {
+        if (isMounted) {
+          setError(err.message || "Failed to load AI insights");
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
-    )}`;
-  };
+    };
+
+    init();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   if (loading) {
     return (
       <div className="analytics-page">
         <div className="loading-state">
-          Analyzing your financial activity...
+          Analyzing your financial activity and generating AI insights...
         </div>
       </div>
     );
@@ -77,354 +61,145 @@ function AIInsights() {
     return (
       <div className="analytics-page">
         <div className="error-message">
-          ✕ {error}
+          <span>✕</span> {error}
         </div>
+        <button
+          type="button"
+          className="primary-button"
+          style={{ marginTop: "16px" }}
+          onClick={() => {
+            setLoading(true);
+            loadInsights();
+          }}
+        >
+          Retry
+        </button>
       </div>
     );
   }
 
-  if (!data) {
-    return null;
-  }
-
-  if (!data.has_data) {
+  if (!data || !data.has_data) {
     return (
       <div className="analytics-page">
-
         <div className="page-header">
           <div>
-
-            <h1>
-              AI Financial Insights
-            </h1>
-
-            <p>
-              Personalized observations based
-              on your financial activity
-            </p>
-
+            <h1>AI Financial Insights</h1>
+            <p>Smart automated recommendations and spending risk detection</p>
           </div>
         </div>
 
-        <div className="analytics-card">
-
+        <div className="dashboard-card" style={{ padding: "40px", textAlign: "center" }}>
           <div className="empty-state">
-
-            <h3>
-              No financial data yet
-            </h3>
-
-            <p>
-              Add some income and expenses
-              to generate financial insights.
-            </p>
-
+            <h3>No financial activity recorded yet</h3>
+            <p>Record transactions to receive AI-powered spending insights and optimizations.</p>
           </div>
-
         </div>
-
       </div>
     );
   }
-
-  const insights = data.insights || [];
-
-  const categories =
-    data.category_totals || {};
 
   return (
     <div className="analytics-page">
-
-      {/* HEADER */}
-
       <div className="page-header">
-
         <div>
-
-          <h1>
-            AI Financial Insights
-          </h1>
-
-          <p>
-            Personalized observations from
-            your real financial data
-          </p>
-
+          <h1>AI Financial Insights</h1>
+          <p>Automated heuristics, spending analysis, and financial health scores</p>
         </div>
-
       </div>
 
-
-      {/* SUMMARY */}
-
+      {/* SUMMARY OVERVIEW */}
       <div className="stats-grid">
-
         <div className="stat-card">
-
-          <div className="stat-card-icon">
-            ↑
-          </div>
-
+          <div className="stat-card-icon income-icon">↑</div>
           <div>
-
-            <p className="stat-label">
-              Total Income
-            </p>
-
-            <h2>
-              {formatMoney(
-                data.summary.income
-              )}
-            </h2>
-
+            <p className="stat-label">Net Income</p>
+            <h2>{formatMoney(data.summary?.income)}</h2>
           </div>
-
         </div>
 
-
         <div className="stat-card">
-
-          <div className="stat-card-icon">
-            ↓
-          </div>
-
+          <div className="stat-card-icon expense-icon">↓</div>
           <div>
-
-            <p className="stat-label">
-              Total Expenses
-            </p>
-
-            <h2>
-              {formatMoney(
-                data.summary.expenses
-              )}
-            </h2>
-
+            <p className="stat-label">Total Outflows</p>
+            <h2>{formatMoney(data.summary?.expenses)}</h2>
           </div>
-
         </div>
 
-
         <div className="stat-card">
-
-          <div className="stat-card-icon">
-            ₹
-          </div>
-
+          <div className="stat-card-icon">₹</div>
           <div>
-
-            <p className="stat-label">
-              Current Balance
-            </p>
-
-            <h2>
-              {formatMoney(
-                data.summary.balance
-              )}
-            </h2>
-
+            <p className="stat-label">Net Surplus / Savings</p>
+            <h2>{formatMoney(data.summary?.balance)}</h2>
           </div>
-
         </div>
-
       </div>
 
-
-      {/* AI INSIGHTS */}
-
-      <div className="analytics-card">
-
+      {/* INSIGHT CARDS */}
+      <div className="dashboard-card">
         <div className="card-header">
-
           <div>
-
-            <h2>
-              AI Insights
-            </h2>
-
-            <p>
-              Important observations about
-              your finances
-            </p>
-
+            <h2>Detected Observations & Actions</h2>
+            <p>Key highlights generated from your recent spending distribution</p>
           </div>
-
         </div>
 
+        <div style={{ marginTop: "20px" }}>
+          {data.insights.map((item, idx) => (
+            <div
+              key={idx}
+              className="insight"
+              style={{
+                display: "flex",
+                gap: "16px",
+                padding: "16px",
+                background: "rgba(255, 255, 255, 0.02)",
+                borderRadius: "12px",
+                marginBottom: "14px",
+                borderLeft: `4px solid ${
+                  item.type === "danger"
+                    ? "#ef4444"
+                    : item.type === "warning"
+                    ? "#f59e0b"
+                    : item.type === "success"
+                    ? "#10b981"
+                    : "#6366f1"
+                }`,
+              }}
+            >
+              <div
+                className={`insight-icon ${item.type}`}
+                style={{
+                  width: "36px",
+                  height: "36px",
+                  borderRadius: "8px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "16px",
+                  flexShrink: 0,
+                }}
+              >
+                {item.type === "danger"
+                  ? "⚠"
+                  : item.type === "warning"
+                  ? "⚡"
+                  : item.type === "success"
+                  ? "✓"
+                  : "ℹ"}
+              </div>
 
-        <div className="analytics-category-list">
-
-          {insights.map(
-            (insight, index) => {
-
-              let icon = "ℹ";
-
-              if (
-                insight.type === "success"
-              ) {
-                icon = "✓";
-              }
-
-              if (
-                insight.type === "warning"
-              ) {
-                icon = "⚠";
-              }
-
-              if (
-                insight.type === "danger"
-              ) {
-                icon = "✕";
-              }
-
-              return (
-                <div
-                  className="analytics-category"
-                  key={index}
-                >
-
-                  <div
-                    className="analytics-category-header"
-                  >
-
-                    <span>
-                      {icon}{" "}
-                      {insight.title}
-                    </span>
-
-                  </div>
-
-
-                  <p
-                    style={{
-                      marginTop: "8px",
-                      marginBottom: "0",
-                      color: "#667085",
-                      fontSize: "14px",
-                      lineHeight: "1.6",
-                    }}
-                  >
-                    {insight.message}
-                  </p>
-
-                </div>
-              );
-            }
-          )}
-
+              <div>
+                <strong style={{ fontSize: "15px", display: "block", marginBottom: "4px" }}>
+                  {item.title}
+                </strong>
+                <p style={{ color: "#9ca3af", lineHeight: "1.5", fontSize: "14px" }}>
+                  {item.message}
+                </p>
+              </div>
+            </div>
+          ))}
         </div>
-
       </div>
-
-
-      {/* CATEGORY ANALYSIS */}
-
-      <div className="analytics-card">
-
-        <div className="card-header">
-
-          <div>
-
-            <h2>
-              Spending by Category
-            </h2>
-
-            <p>
-              Your expense distribution
-            </p>
-
-          </div>
-
-        </div>
-
-
-        {Object.keys(categories).length === 0 ? (
-
-          <div className="empty-state">
-
-            <p>
-              No expense categories
-              available.
-            </p>
-
-          </div>
-
-        ) : (
-
-          <div className="analytics-category-list">
-
-            {Object.entries(
-              categories
-            ).map(
-              ([category, amount]) => {
-
-                const total =
-                  Number(
-                    data.summary.expenses
-                  );
-
-                const percentage =
-                  total > 0
-                    ? (
-                        Number(amount) /
-                        total
-                      ) * 100
-                    : 0;
-
-                return (
-                  <div
-                    className="analytics-category"
-                    key={category}
-                  >
-
-                    <div
-                      className="analytics-category-header"
-                    >
-
-                      <span>
-                        {category}
-                      </span>
-
-                      <strong>
-                        {formatMoney(
-                          amount
-                        )}
-                      </strong>
-
-                    </div>
-
-
-                    <div className="analytics-bar">
-
-                      <div
-                        className="analytics-bar-fill"
-                        style={{
-                          width:
-                            `${percentage}%`,
-                        }}
-                      />
-
-                    </div>
-
-
-                    <div
-                      className="analytics-percentage"
-                    >
-                      {percentage.toFixed(1)}
-                      % of total expenses
-                    </div>
-
-                  </div>
-                );
-              }
-            )}
-
-          </div>
-
-        )}
-
-      </div>
-
     </div>
   );
 }

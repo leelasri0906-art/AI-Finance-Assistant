@@ -4,50 +4,95 @@ swiggy lunch,Food
 swiggy breakfast,Food
 zomato dinner,Food
 zomato lunch,Food
+zomato biryani,Food
 restaurant dinner,Food
 restaurant lunch,Food
-pizza order,Food
-burger meal,Food
-coffee at cafe,Food
-groceries,Food
-milk and bread,Food
-fruit purchase,Food
-vegetables,Food
-uber ride,Transport
-ola cab,Transport
-cab to college,Transport
-auto ride,Transport
-bus ticket,Transport
-petrol refill,Transport
-fuel station,Transport
-bike service,Transport
-amazon shoes,Shopping
-amazon clothes,Shopping
-clothes purchase,Shopping
-new shirt,Shopping
-new shoes,Shopping
-shopping mall,Shopping
-online shopping,Shopping
-electricity bill,Bills
-water bill,Bills
-internet bill,Bills
-mobile recharge,Bills
-phone bill,Bills
-rent payment,Bills
-insurance payment,Bills
+pizza order dominoes,Food
+burger meal mcdonalds,Food
+starbucks coffee at cafe,Food
+subway sandwich,Food
+groceries bigbasket,Food
+zepto grocery order,Food
+blinkit quick groceries,Food
+milk and bread daily,Food
+fresh fruit purchase,Food
+fresh vegetables market,Food
+bakery snacks and cake,Food
+office cafeteria food,Food
+supermarket grocery items,Food
+uber ride to office,Transport
+uber cab ride,Transport
+ola cab booking,Transport
+rapido bike ride,Transport
+cab to college campus,Transport
+auto rickshaw ride,Transport
+city bus ticket,Transport
+metro card recharge,Transport
+petrol station refill,Transport
+diesel fuel purchase,Transport
+fuel station gas,Transport
+bike servicing and repair,Transport
+car wash and maintenance,Transport
+irctc train ticket,Transport
+flight ticket airfare,Transport
+toll plaza fee fastag,Transport
+parking fee charges,Transport
+amazon shoes order,Shopping
+amazon clothes delivery,Shopping
+flipkart electronics shopping,Shopping
+myntra fashion shopping,Shopping
+clothes purchase at mall,Shopping
+new shirt purchase,Shopping
+new sneakers shoes,Shopping
+shopping mall branded store,Shopping
+online shopping checkout,Shopping
+laptop bag and accessories,Shopping
+winter jacket clothing,Shopping
+headphones from amazon,Shopping
+electricity bill payment,Bills
+water utility bill,Bills
+broadband internet bill,Bills
+wifi fiber monthly recharge,Bills
+mobile phone recharge airtel,Bills
+jio mobile recharge bill,Bills
+phone bill postpaid,Bills
+house rent payment monthly,Bills
+apartment maintenance charges,Bills
+insurance policy premium,Bills
+lpg cooking gas cylinder,Bills
+dth tv dish recharge,Bills
 netflix subscription,Entertainment
-movie ticket,Entertainment
-cinema ticket,Entertainment
-spotify subscription,Entertainment
-youtube premium,Entertainment
-concert ticket,Entertainment
-gym membership,Health
-doctor consultation,Health
-medicine purchase,Health
-pharmacy,Health
-medical checkup,Health
-hospital bill,Health
-salary credit,Income
-monthly salary,Income
-freelance payment,Income
-bonus received,Income
+amazon prime video,Entertainment
+disney hotstar subscription,Entertainment
+movie ticket bookmyshow,Entertainment
+cinema ticket pvr inox,Entertainment
+spotify music subscription,Entertainment
+youtube premium monthly,Entertainment
+concert ticket live show,Entertainment
+playstation gaming subscription,Entertainment
+board games amusement park,Entertainment
+bowling and arcade games,Entertainment
+gym membership cult fit,Health
+doctor consultation fee,Health
+medicine purchase chemist,Health
+apollo pharmacy medicines,Health
+annual medical checkup,Health
+hospital emergency bill,Health
+dental clinic cleaning,Health
+eye checkup optical glasses,Health
+blood test pathology lab,Health
+physiotherapy session,Health
+vitamins and supplements,Health
+salary credit from employer,Income
+monthly salary payment,Income
+freelance client payment,Income
+freelance project earnings,Income
+annual performance bonus,Income
+quarterly bonus received,Income
+consulting fee received,Income
+stock dividend payout,Income
+bank savings interest,Income
+cashback reward deposit,Income
+refund received from store,Income
+internship monthly stipend,Income
+investment profit withdrawal,Income

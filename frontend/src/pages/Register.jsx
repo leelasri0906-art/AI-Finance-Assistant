@@ -1,27 +1,20 @@
-
 import { useState } from "react";
+import api from "../services/api";
 
-function Register() {
+function Register({ onSwitchToLogin }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  // Uses the Render backend in production
-  // and the local backend during development.
-  const API_URL =
-    import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
-
   const handleRegister = async (e) => {
     e.preventDefault();
-
     setError("");
     setSuccess("");
 
-    if (!name || !email || !password) {
+    if (!name.trim() || !email.trim() || !password.trim()) {
       setError("Please fill in all fields.");
       return;
     }
@@ -34,39 +27,13 @@ function Register() {
     setLoading(true);
 
     try {
-      const response = await fetch(`${API_URL}/api/register`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name,
-          email,
-          password,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.detail || "Registration failed"
-        );
-      }
-
-      setSuccess(
-        "Account created successfully. You can now sign in."
-      );
-
+      await api.register(name.trim(), email.trim(), password);
+      setSuccess("Account created successfully! You can now sign in.");
       setName("");
       setEmail("");
       setPassword("");
-
     } catch (err) {
-      console.error(err);
-      setError(
-        err.message || "Unable to connect to the server."
-      );
+      setError(err.message || "Unable to complete registration.");
     } finally {
       setLoading(false);
     }
@@ -75,10 +42,8 @@ function Register() {
   return (
     <div className="auth-page">
       <div className="auth-card">
-
         <div className="auth-logo">
           <div className="auth-logo-icon">₹</div>
-
           <div>
             <h1>AI Finance Assistant</h1>
             <p>Smart financial management</p>
@@ -87,61 +52,58 @@ function Register() {
 
         <div className="auth-heading">
           <h2>Create Account</h2>
-          <p>
-            Start managing your finances intelligently
-          </p>
+          <p>Start managing your finances intelligently</p>
         </div>
 
         {error && (
           <div className="auth-error">
-            ✕ {error}
+            <span>✕</span> {error}
           </div>
         )}
 
         {success && (
           <div className="auth-success">
-            ✓ {success}
+            <span>✓</span> {success}
           </div>
         )}
 
         <form onSubmit={handleRegister}>
-
           <div className="auth-form-group">
-            <label>Full Name</label>
-
+            <label htmlFor="reg-name">Full Name</label>
             <input
+              id="reg-name"
               type="text"
-              placeholder="Enter your name"
+              placeholder="Enter your full name"
               value={name}
-              onChange={(e) =>
-                setName(e.target.value)
-              }
+              onChange={(e) => setName(e.target.value)}
+              required
+              autoComplete="name"
             />
           </div>
 
           <div className="auth-form-group">
-            <label>Email Address</label>
-
+            <label htmlFor="reg-email">Email Address</label>
             <input
+              id="reg-email"
               type="email"
               placeholder="Enter your email"
               value={email}
-              onChange={(e) =>
-                setEmail(e.target.value)
-              }
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              autoComplete="email"
             />
           </div>
 
           <div className="auth-form-group">
-            <label>Password</label>
-
+            <label htmlFor="reg-password">Password</label>
             <input
+              id="reg-password"
               type="password"
-              placeholder="Create a password"
+              placeholder="Create a password (min 6 characters)"
               value={password}
-              onChange={(e) =>
-                setPassword(e.target.value)
-              }
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              autoComplete="new-password"
             />
           </div>
 
@@ -150,27 +112,20 @@ function Register() {
             className="auth-submit-btn"
             disabled={loading}
           >
-            {loading
-              ? "Creating Account..."
-              : "Create Account"}
+            {loading ? "Creating Account..." : "Create Account"}
           </button>
-
         </form>
 
         <div className="auth-footer">
           <p>Already have an account?</p>
-
           <button
             type="button"
             className="auth-link-btn"
-            onClick={() => {
-              window.location.href = "/";
-            }}
+            onClick={onSwitchToLogin}
           >
             Sign In
           </button>
         </div>
-
       </div>
     </div>
   );

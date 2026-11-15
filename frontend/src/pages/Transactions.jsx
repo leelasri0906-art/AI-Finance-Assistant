@@ -1,117 +1,96 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import api from "../services/api";
+import { formatMoney } from "../utils/formatters";
 
 function Transactions() {
   const [transactions, setTransactions] = useState([]);
-
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [transactionType, setTransactionType] = useState("Expense");
+  const [category, setCategory] = useState("");
   const [transactionDate, setTransactionDate] = useState(
     new Date().toISOString().split("T")[0]
   );
-
   const [editingId, setEditingId] = useState(null);
 
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [filterType, setFilterType] = useState("All");
 
-  const API_URL = import.meta.env.VITE_API_URL;
+  const categories = [
+    "Food",
+    "Transport",
+    "Shopping",
+    "Bills",
+    "Entertainment",
+    "Health",
+    "Income",
+    "Other",
+  ];
 
-  // =====================================================
-  // GET JWT TOKEN
-  // =====================================================
-
-  const getToken = () => {
-    return localStorage.getItem("access_token");
-  };
-
-
-  // =====================================================
-  // FETCH TRANSACTIONS
-  // =====================================================
-
-  const fetchTransactions = async () => {
+  const fetchTransactions = useCallback(async () => {
     try {
-      setError("");
-
-      const token = getToken();
-
-      if (!token) {
-        setError("You are not logged in.");
-        return;
-      }
-
-      const response = await fetch(
-        `${API_URL}/api/transactions`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-
-        if (response.status === 401) {
-          localStorage.removeItem("access_token");
-          throw new Error("Your session has expired. Please login again.");
-        }
-
-        throw new Error(
-          data.detail || "Failed to fetch transactions"
-        );
-      }
-
+      const data = await api.getTransactions();
       setTransactions(data);
-
+      setError("");
     } catch (err) {
-
-      console.error(err);
-
-      setError(err.message);
+      setError(err.message || "Failed to fetch transactions");
+    } finally {
+      setFetching(false);
     }
-  };
-
-
-  // =====================================================
-  // LOAD TRANSACTIONS
-  // =====================================================
-
-  useEffect(() => {
-    fetchTransactions();
   }, []);
 
+  useEffect(() => {
+    let isMounted = true;
 
-  // =====================================================
-  // CLEAR FORM
-  // =====================================================
+    const init = async () => {
+      try {
+        const data = await api.getTransactions();
+        if (isMounted) {
+          setTransactions(data);
+          setError("");
+        }
+      } catch (err) {
+        if (isMounted) {
+          setError(err.message || "Failed to fetch transactions");
+        }
+      } finally {
+        if (isMounted) {
+          setFetching(false);
+        }
+      }
+    };
+
+    init();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const clearForm = () => {
-
     setDescription("");
     setAmount("");
     setTransactionType("Expense");
-
-    setTransactionDate(
-      new Date().toISOString().split("T")[0]
-    );
-
+    setCategory("");
+    setTransactionDate(new Date().toISOString().split("T")[0]);
     setEditingId(null);
   };
 
-
-  // =====================================================
-  // ADD / UPDATE TRANSACTION
-  // =====================================================
+  const handleStartEdit = (tx) => {
+    setEditingId(tx.id);
+    setDescription(tx.description);
+    setAmount(String(tx.amount));
+    setTransactionType(tx.transaction_type);
+    setCategory(tx.category || "");
+    setTransactionDate(tx.transaction_date);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const handleSubmit = async (e) => {
-
     e.preventDefault();
-
     setMessage("");
     setError("");
 
@@ -120,593 +99,273 @@ function Transactions() {
       return;
     }
 
-    if (!amount || Number(amount) <= 0) {
-      setError("Please enter a valid amount.");
-      return;
-    }
-
-    const token = getToken();
-
-    if (!token) {
-      setError("You are not logged in.");
+    const numAmount = parseFloat(amount);
+    if (isNaN(numAmount) || numAmount <= 0) {
+      setError("Please enter a valid amount greater than 0.");
       return;
     }
 
     setLoading(true);
 
     try {
-
-      const url = editingId
-        ? `${API_URL}/api/transactions/${editingId}`
-        : `${API_URL}/api/transactions`;
-
-      const method = editingId
-        ? "PUT"
-        : "POST";
-
-      const response = await fetch(url, {
-
-        method: method,
-
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-
-        body: JSON.stringify({
-          description: description,
-          amount: Number(amount),
-          transaction_type: transactionType,
-          transaction_date: transactionDate,
-        }),
-
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-
-        if (response.status === 401) {
-          localStorage.removeItem("access_token");
-        }
-
-        throw new Error(
-          data.detail || "Failed to save transaction"
-        );
-      }
-
-
-      // =================================================
-      // SUCCESS MESSAGE
-      // =================================================
+      const payload = {
+        description: description.trim(),
+        amount: numAmount,
+        transaction_type: transactionType,
+        transaction_date: transactionDate,
+        category: category.trim() || undefined,
+      };
 
       if (editingId) {
-
-        setMessage(
-          `Transaction updated successfully. AI Category: ${data.transaction.category}`
-        );
-
+        await api.updateTransaction(editingId, payload);
+        setMessage("Transaction updated successfully!");
       } else {
-
-        setMessage(
-          `Transaction added successfully. AI Category: ${data.transaction.category}`
-        );
-
+        await api.createTransaction(payload);
+        setMessage("Transaction added successfully (AI auto-categorized if empty)!");
       }
 
-
       clearForm();
-
       await fetchTransactions();
-
     } catch (err) {
-
-      console.error(err);
-
-      setError(err.message);
-
+      setError(err.message || "Failed to save transaction.");
     } finally {
-
       setLoading(false);
-
     }
   };
 
-
-  // =====================================================
-  // EDIT
-  // =====================================================
-
-  const handleEdit = (transaction) => {
-
-    setEditingId(transaction.id);
-
-    setDescription(transaction.description);
-
-    setAmount(transaction.amount);
-
-    setTransactionType(
-      transaction.transaction_type
-    );
-
-    setTransactionDate(
-      transaction.transaction_date
-    );
-
-    setMessage("");
-    setError("");
-
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
-  };
-
-
-  // =====================================================
-  // DELETE
-  // =====================================================
-
-  const handleDelete = async (transactionId) => {
-
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this transaction?"
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
-    setMessage("");
-    setError("");
-
-    const token = getToken();
-
-    if (!token) {
-      setError("You are not logged in.");
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this transaction?")) {
       return;
     }
 
     try {
-
-      const response = await fetch(
-        `${API_URL}/api/transactions/${transactionId}`,
-        {
-          method: "DELETE",
-
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-
-        if (response.status === 401) {
-          localStorage.removeItem("access_token");
-        }
-
-        throw new Error(
-          data.detail || "Failed to delete transaction"
-        );
-      }
-
-      setMessage(
-        "Transaction deleted successfully."
-      );
-
+      await api.deleteTransaction(id);
+      setMessage("Transaction deleted successfully.");
       await fetchTransactions();
-
     } catch (err) {
-
-      console.error(err);
-
-      setError(err.message);
+      setError(err.message || "Failed to delete transaction.");
     }
   };
 
-
-  // =====================================================
-  // FORMAT AMOUNT
-  // =====================================================
-
-  const formatAmount = (amount) => {
-
-    return `₹${Number(amount).toLocaleString("en-IN")}`;
-
-  };
-
-
-  // =====================================================
-  // UI
-  // =====================================================
+  const filteredTransactions = transactions.filter((tx) => {
+    if (filterType === "All") return true;
+    return tx.transaction_type === filterType;
+  });
 
   return (
     <div className="transactions-page">
-
-      {/* PAGE HEADER */}
-
       <div className="page-header">
-
         <div>
-
           <h1>Transactions</h1>
-
-          <p>
-            Manage your income and expenses
-          </p>
-
+          <p>Add, edit, and track your financial transactions with AI auto-categorization</p>
         </div>
-
       </div>
 
-
-      {/* ADD / EDIT FORM */}
-
+      {/* FORM CARD */}
       <div className="transaction-form-card">
-
-        <h2>
-          {editingId
-            ? "Edit Transaction"
-            : "Add Transaction"}
-        </h2>
-
-
-        <form onSubmit={handleSubmit}>
-
-          {/* ROW 1 */}
-
-          <div className="form-row">
-
-            <div className="form-group">
-
-              <label>
-                Description
-              </label>
-
-              <input
-                type="text"
-                placeholder="Example: swiggy dinner"
-                value={description}
-                onChange={(e) =>
-                  setDescription(e.target.value)
-                }
-              />
-
-            </div>
-
-
-            <div className="form-group">
-
-              <label>
-                Amount
-              </label>
-
-              <input
-                type="number"
-                placeholder="450"
-                min="1"
-                value={amount}
-                onChange={(e) =>
-                  setAmount(e.target.value)
-                }
-              />
-
-            </div>
-
-          </div>
-
-
-          {/* ROW 2 */}
-
-          <div className="form-row">
-
-            <div className="form-group">
-
-              <label>
-                Transaction Type
-              </label>
-
-              <select
-                value={transactionType}
-                onChange={(e) =>
-                  setTransactionType(
-                    e.target.value
-                  )
-                }
-              >
-
-                <option value="Expense">
-                  Expense
-                </option>
-
-                <option value="Income">
-                  Income
-                </option>
-
-              </select>
-
-            </div>
-
-
-            <div className="form-group">
-
-              <label>
-                Date
-              </label>
-
-              <input
-                type="date"
-                value={transactionDate}
-                onChange={(e) =>
-                  setTransactionDate(
-                    e.target.value
-                  )
-                }
-              />
-
-            </div>
-
-          </div>
-
-
-          {/* BUTTONS */}
-
-          <div className="form-buttons">
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="add-transaction-btn"
-            >
-
-              {loading
-                ? "Saving..."
-                : editingId
-                ? "Update Transaction"
-                : "Add Transaction"}
-
-            </button>
-
-
-            {editingId && (
-
-              <button
-                type="button"
-                className="cancel-edit-btn"
-                onClick={clearForm}
-              >
-                Cancel
-              </button>
-
-            )}
-
-          </div>
-
-        </form>
-
-
-        {/* SUCCESS */}
-
-        {message && (
-
-          <div className="success-message">
-            ✓ {message}
-          </div>
-
-        )}
-
-
-        {/* ERROR */}
+        <h2>{editingId ? "Edit Transaction" : "Add New Transaction"}</h2>
 
         {error && (
-
-          <div className="error-message">
-            ✕ {error}
+          <div className="error-message" style={{ marginBottom: "16px" }}>
+            <span>✕</span> {error}
           </div>
-
         )}
 
-      </div>
+        {message && (
+          <div className="success-message" style={{ marginBottom: "16px" }}>
+            <span>✓</span> {message}
+          </div>
+        )}
 
+        <form onSubmit={handleSubmit}>
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="tx-desc">Description</label>
+              <input
+                id="tx-desc"
+                type="text"
+                placeholder="e.g. Swiggy dinner, Uber cab, Monthly salary..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                required
+              />
+            </div>
 
-      {/* TRANSACTION HISTORY */}
-
-      <div className="transaction-history">
-
-        <div className="section-header">
-
-          <div>
-
-            <h2>
-              Transaction History
-            </h2>
-
-            <p>
-              {transactions.length} transaction
-              {transactions.length !== 1
-                ? "s"
-                : ""}
-            </p>
-
+            <div className="form-group">
+              <label htmlFor="tx-amt">Amount (₹)</label>
+              <input
+                id="tx-amt"
+                type="number"
+                step="0.01"
+                min="0.01"
+                placeholder="0.00"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                required
+              />
+            </div>
           </div>
 
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="tx-type">Transaction Type</label>
+              <select
+                id="tx-type"
+                value={transactionType}
+                onChange={(e) => {
+                  const newType = e.target.value;
+                  setTransactionType(newType);
+                  if (newType === "Income" && !category) {
+                    setCategory("Income");
+                  }
+                }}
+              >
+                <option value="Expense">Expense</option>
+                <option value="Income">Income</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="tx-cat">Category (Leave blank for AI auto-detection)</label>
+              <select
+                id="tx-cat"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+              >
+                <option value="">Auto-Detect via AI</option>
+                {categories.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="tx-date">Date</label>
+              <input
+                id="tx-date"
+                type="date"
+                value={transactionDate}
+                onChange={(e) => setTransactionDate(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="form-group" style={{ justifyContent: "flex-end", flexDirection: "row", gap: "10px", alignItems: "flex-end" }}>
+              {editingId && (
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={clearForm}
+                  style={{ height: "44px" }}
+                >
+                  Cancel
+                </button>
+              )}
+              <button
+                type="submit"
+                className="add-transaction-btn"
+                disabled={loading}
+                style={{ height: "44px", flex: 1 }}
+              >
+                {loading
+                  ? "Saving..."
+                  : editingId
+                  ? "Update Transaction"
+                  : "Add Transaction"}
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      {/* TRANSACTION LIST */}
+      <div className="dashboard-card">
+        <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <h2>Transaction History</h2>
+            <p>{filteredTransactions.length} transaction(s) recorded</p>
+          </div>
+
+          <div style={{ display: "flex", gap: "8px" }}>
+            {["All", "Income", "Expense"].map((type) => (
+              <button
+                key={type}
+                type="button"
+                className={
+                  filterType === type ? "primary-button" : "secondary-button"
+                }
+                style={{ padding: "6px 14px", fontSize: "12px", marginTop: 0 }}
+                onClick={() => setFilterType(type)}
+              >
+                {type}
+              </button>
+            ))}
+          </div>
         </div>
 
-
-        {/* EMPTY */}
-
-        {transactions.length === 0 ? (
-
+        {fetching ? (
+          <div className="loading-state">Loading transactions...</div>
+        ) : filteredTransactions.length === 0 ? (
           <div className="empty-state">
-
-            <h3>
-              No transactions yet
-            </h3>
-
-            <p>
-              Add your first transaction
-              using the form above.
-            </p>
-
+            <h3>No transactions found</h3>
+            <p>Add your income and expenses using the form above.</p>
           </div>
-
         ) : (
+          <div className="transaction-list">
+            {filteredTransactions.map((tx) => (
+              <div className="transaction-row" key={tx.id}>
+                <div>
+                  <strong>{tx.description}</strong>
+                  <span style={{ color: "#777", fontSize: "12px" }}>
+                    {tx.category} • {tx.transaction_date}
+                  </span>
+                </div>
 
-          <div className="transaction-table-wrapper">
+                <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                  <span
+                    className={
+                      tx.transaction_type === "Income"
+                        ? "income-amount"
+                        : "expense-amount"
+                    }
+                    style={{ fontWeight: "600", fontSize: "15px" }}
+                  >
+                    {tx.transaction_type === "Income" ? "+" : "-"} {formatMoney(tx.amount)}
+                  </span>
 
-            <table className="transaction-table">
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    style={{ padding: "4px 8px", fontSize: "11px", marginTop: 0 }}
+                    onClick={() => handleStartEdit(tx)}
+                  >
+                    Edit
+                  </button>
 
-              <thead>
-
-                <tr>
-
-                  <th>
-                    Description
-                  </th>
-
-                  <th>
-                    Category
-                  </th>
-
-                  <th>
-                    Type
-                  </th>
-
-                  <th>
-                    Amount
-                  </th>
-
-                  <th>
-                    Date
-                  </th>
-
-                  <th>
-                    Actions
-                  </th>
-
-                </tr>
-
-              </thead>
-
-
-              <tbody>
-
-                {transactions.map(
-                  (transaction) => (
-
-                    <tr key={transaction.id}>
-
-                      <td>
-                        <strong>
-                          {transaction.description}
-                        </strong>
-                      </td>
-
-
-                      <td>
-
-                        <span className="category-badge">
-                          {transaction.category}
-                        </span>
-
-                      </td>
-
-
-                      <td>
-
-                        <span
-                          className={
-                            transaction.transaction_type ===
-                            "Income"
-                              ? "income-badge"
-                              : "expense-badge"
-                          }
-                        >
-
-                          {
-                            transaction.transaction_type
-                          }
-
-                        </span>
-
-                      </td>
-
-
-                      <td
-                        className={
-                          transaction.transaction_type ===
-                          "Income"
-                            ? "income-amount"
-                            : "expense-amount"
-                        }
-                      >
-
-                        {transaction.transaction_type ===
-                        "Income"
-                          ? "+"
-                          : "-"}{" "}
-
-                        {formatAmount(
-                          transaction.amount
-                        )}
-
-                      </td>
-
-
-                      <td>
-                        {transaction.transaction_date}
-                      </td>
-
-
-                      <td>
-
-                        <div className="transaction-actions">
-
-                          <button
-                            className="edit-btn"
-                            onClick={() =>
-                              handleEdit(
-                                transaction
-                              )
-                            }
-                          >
-                            Edit
-                          </button>
-
-
-                          <button
-                            className="delete-btn"
-                            onClick={() =>
-                              handleDelete(
-                                transaction.id
-                              )
-                            }
-                          >
-                            Delete
-                          </button>
-
-                        </div>
-
-                      </td>
-
-                    </tr>
-
-                  )
-                )}
-
-              </tbody>
-
-            </table>
-
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    style={{
+                      padding: "4px 8px",
+                      fontSize: "11px",
+                      marginTop: 0,
+                      color: "#f87171",
+                      borderColor: "rgba(248, 113, 113, 0.3)",
+                    }}
+                    onClick={() => handleDelete(tx.id)}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
-
         )}
-
       </div>
-
     </div>
   );
 }

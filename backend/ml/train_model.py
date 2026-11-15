@@ -1,37 +1,37 @@
-import pandas as pd
+from pathlib import Path
 import joblib
-
+import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 
 
-# Load training dataset
-data = pd.read_csv("ml/expense_dataset.csv")
+def train():
+    current_dir = Path(__file__).resolve().parent
+    dataset_path = current_dir / "expense_dataset.csv"
+    model_path = current_dir / "expense_model.pkl"
 
-X = data["description"]
-y = data["category"]
+    data = pd.read_csv(dataset_path)
+    x_data = data["description"]
+    y_data = data["category"]
+
+    model = Pipeline([
+        ("tfidf", TfidfVectorizer(
+            lowercase=True,
+            ngram_range=(1, 2)
+        )),
+        ("classifier", LogisticRegression(
+            max_iter=1000
+        ))
+    ])
+
+    model.fit(x_data, y_data)
+    joblib.dump(model, model_path)
+
+    print("ML model trained successfully.")
+    print("Categories:", sorted(data["category"].unique()))
+    print(f"Model saved as {model_path}")
 
 
-# Create ML pipeline
-model = Pipeline([
-    ("tfidf", TfidfVectorizer(
-        lowercase=True,
-        ngram_range=(1, 2)
-    )),
-    ("classifier", LogisticRegression(
-        max_iter=1000
-    ))
-])
-
-
-# Train model
-model.fit(X, y)
-
-
-# Save trained model
-joblib.dump(model, "ml/expense_model.pkl")
-
-print("ML model trained successfully.")
-print("Categories:", sorted(data["category"].unique()))
-print("Model saved as ml/expense_model.pkl")
+if __name__ == "__main__":
+    train()
